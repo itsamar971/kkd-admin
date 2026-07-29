@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
@@ -32,18 +32,11 @@ const Orders: React.FC = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      // Mock Data
-      setTimeout(() => {
-        setOrders([
-          { id: 'ORD-1001-A', buyerId: 'b1', farmerId: 'f1', productId: 'p1', quantityKg: 50, totalAmount: 2500, status: 'processing', deliveryAddress: '123 Main St, Delhi', createdAt: '2023-10-25T10:00:00Z' },
-          { id: 'ORD-1002-B', buyerId: 'b2', farmerId: 'f2', productId: 'p2', quantityKg: 100, totalAmount: 6000, status: 'dispatched', deliveryAddress: '456 Market Road, Mumbai', createdAt: '2023-10-24T14:30:00Z', driverNumber: '+919876543210' },
-          { id: 'ORD-1003-C', buyerId: 'b3', farmerId: 'f3', productId: 'p3', quantityKg: 20, totalAmount: 1200, status: 'delivered', deliveryAddress: '789 Tech Park, Bangalore', createdAt: '2023-10-20T09:15:00Z' },
-          { id: 'ORD-1004-D', buyerId: 'b1', farmerId: 'f2', productId: 'p4', quantityKg: 5, totalAmount: 400, status: 'cancelled', deliveryAddress: '123 Main St, Delhi', createdAt: '2023-10-18T16:45:00Z' },
-        ]);
-        setLoading(false);
-      }, 500);
+      const response = await api.get('/orders');
+      setOrders(response.data);
     } catch (error) {
       console.error('Failed to fetch orders', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -51,9 +44,7 @@ const Orders: React.FC = () => {
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       setUpdatingId(id);
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      // Update local state
+      await api.patch(`/orders/${id}/status`, { status });
       setOrders(prev => prev.map(o => 
         o.id === id ? { ...o, status } : o
       ));

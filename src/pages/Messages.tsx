@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Send, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Search, Send } from 'lucide-react';
+import api from '../api/axios';
 
 interface Message {
   id: string;
@@ -20,80 +21,56 @@ interface Conversation {
   messages: Message[];
 }
 
-const mockConversations: Conversation[] = [
-  {
-    id: 'c1',
-    userId: 'f1',
-    userName: 'Ramesh Singh',
-    userType: 'farmer',
-    lastMessage: 'The app is not letting me upload crop images.',
-    timestamp: '10:30 AM',
-    unread: true,
-    messages: [
-      { id: 'm1', senderId: 'f1', text: 'Hello Admin', timestamp: '10:28 AM', isAdmin: false },
-      { id: 'm2', senderId: 'f1', text: 'The app is not letting me upload crop images.', timestamp: '10:30 AM', isAdmin: false },
-    ]
-  },
-  {
-    id: 'c2',
-    userId: 'b2',
-    userName: 'Anil Kumar',
-    userType: 'buyer',
-    lastMessage: 'My order #1024 hasn\'t arrived yet.',
-    timestamp: 'Yesterday',
-    unread: false,
-    messages: [
-      { id: 'm3', senderId: 'b2', text: 'My order #1024 hasn\'t arrived yet.', timestamp: 'Yesterday', isAdmin: false },
-      { id: 'm4', senderId: 'admin', text: 'Let me check with the dispatch team for you.', timestamp: 'Yesterday', isAdmin: true },
-    ]
-  },
-  {
-    id: 'c3',
-    userId: 'f3',
-    userName: 'Geeta Devi',
-    userType: 'farmer',
-    lastMessage: 'Thank you for the quick support.',
-    timestamp: '2 Days ago',
-    unread: false,
-    messages: [
-      { id: 'm5', senderId: 'f3', text: 'Thank you for the quick support.', timestamp: '2 Days ago', isAdmin: false },
-    ]
-  }
-];
+
 
 const Messages: React.FC = () => {
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
-  const [activeConvId, setActiveConvId] = useState<string>(mockConversations[0].id);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string>('');
   const [replyText, setReplyText] = useState('');
+
+  React.useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const res = await api.get('/admin/messages');
+        setConversations(res.data);
+        if (res.data.length > 0) {
+          setActiveConvId(res.data[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+      }
+    };
+    fetchConversations();
+  }, []);
 
   const activeConv = conversations.find(c => c.id === activeConvId);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !activeConv) return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      senderId: 'admin',
-      text: replyText,
-      timestamp: 'Just now',
-      isAdmin: true,
-    };
-
-    setConversations(prev => prev.map(c => {
-      if (c.id === activeConvId) {
-        return {
-          ...c,
-          lastMessage: replyText,
-          timestamp: 'Just now',
-          messages: [...c.messages, newMessage],
-          unread: false
-        };
-      }
-      return c;
-    }));
-    
+    const textToSend = replyText;
     setReplyText('');
+
+    try {
+      const res = await api.post(`/admin/messages/${activeConvId}/reply`, { text: textToSend });
+      const newMessage = res.data.reply;
+
+      setConversations(prev => prev.map(c => {
+        if (c.id === activeConvId) {
+          return {
+            ...c,
+            lastMessage: textToSend,
+            timestamp: newMessage.timestamp,
+            messages: [...(c.messages || []), newMessage],
+            unread: false
+          };
+        }
+        return c;
+      }));
+    } catch (error) {
+      console.error('Error sending reply:', error);
+    }
   };
 
   return (
@@ -121,41 +98,47 @@ const Messages: React.FC = () => {
           </div>
           
           <div className="flex-1 overflow-y-auto">
-            {conversations.map(conv => (
-              <div 
-                key={conv.id}
-                onClick={() => {
-                  setActiveConvId(conv.id);
-                  // Mark as read
-                  if (conv.unread) {
-                    setConversations(prev => prev.map(c => c.id === conv.id ? {...c, unread: false} : c));
-                  }
-                }}
-                className={`p-4 cursor-pointer border-b border-slate-100 transition-colors ${
-                  activeConvId === conv.id ? 'bg-primary/5 border-l-4 border-l-primary' : 'hover:bg-slate-50 border-l-4 border-l-transparent'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-1">
-                  <h4 className={`text-sm font-bold ${conv.unread ? 'text-slate-900' : 'text-slate-700'}`}>
-                    {conv.userName}
-                  </h4>
-                  <span className="text-[10px] font-medium text-slate-400">{conv.timestamp}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className={`text-xs truncate mr-2 ${conv.unread ? 'font-bold text-slate-800' : 'text-slate-500'}`}>
-                    {conv.lastMessage}
-                  </p>
-                  {conv.unread && <div className="h-2 w-2 rounded-full bg-primary shrink-0"></div>}
-                </div>
-                <div className="mt-2">
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${
-                    conv.userType === 'farmer' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {conv.userType.toUpperCase()}
-                  </span>
-                </div>
+            {conversations.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-sm font-medium">
+                No active conversations.
               </div>
-            ))}
+            ) : (
+              conversations.map(conv => (
+                <div 
+                  key={conv.id}
+                  onClick={() => {
+                    setActiveConvId(conv.id);
+                    // Mark as read
+                    if (conv.unread) {
+                      setConversations(prev => prev.map(c => c.id === conv.id ? {...c, unread: false} : c));
+                    }
+                  }}
+                  className={`p-4 cursor-pointer border-b border-slate-100 transition-colors ${
+                    activeConvId === conv.id ? 'bg-primary/5 border-l-4 border-l-primary' : 'hover:bg-slate-50 border-l-4 border-l-transparent'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className={`text-sm font-bold ${conv.unread ? 'text-slate-900' : 'text-slate-700'}`}>
+                      {conv.userName}
+                    </h4>
+                    <span className="text-[10px] font-medium text-slate-400">{conv.timestamp ? new Date(conv.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className={`text-xs truncate mr-2 ${conv.unread ? 'font-bold text-slate-800' : 'text-slate-500'}`}>
+                      {conv.lastMessage}
+                    </p>
+                    {conv.unread && <div className="h-2 w-2 rounded-full bg-primary shrink-0"></div>}
+                  </div>
+                  <div className="mt-2">
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${
+                      conv.userType === 'farmer' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {conv.userType?.toUpperCase() || 'USER'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -185,7 +168,7 @@ const Messages: React.FC = () => {
 
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
-                {activeConv.messages.map(msg => (
+                {(activeConv.messages || []).map(msg => (
                   <div key={msg.id} className={`flex ${msg.isAdmin ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${
                       msg.isAdmin 
@@ -194,7 +177,7 @@ const Messages: React.FC = () => {
                     }`}>
                       <p className="text-sm font-medium">{msg.text}</p>
                       <div className={`text-[9px] mt-1 text-right ${msg.isAdmin ? 'text-white/70' : 'text-slate-400'}`}>
-                        {msg.timestamp}
+                        {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </div>
                     </div>
                   </div>

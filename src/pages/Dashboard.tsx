@@ -1,34 +1,153 @@
 import React, { useEffect, useState } from 'react';
-import { IndianRupee, ShoppingBag, Users, TrendingUp, Filter, MoreHorizontal, ArrowUpRight } from 'lucide-react';
+import { IndianRupee, ShoppingBag, Users, TrendingUp, Filter, MoreHorizontal, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import api from '../api/axios';
 
 interface Stats {
   totalOrdersCount: number;
   totalRevenueSum: number;
-  activeFarmers?: number;
-  activeBuyers?: number;
+  activeFarmers: number;
+  activeBuyers: number;
+  topFarmer: string;
+  bestDeal: number;
+  avgOrderValue: number;
+  topFarmersList: { name: string, val: string, p: string, c: string }[];
+  currentMonthRevenue: number;
+  lastMonthRevenue: number;
+  growthPercent: number;
+  pendingFarmers: number;
+  newBuyersThisWeek: number;
 }
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats>({
     totalOrdersCount: 0,
     totalRevenueSum: 0,
-    activeFarmers: 120, // Mock data for now
-    activeBuyers: 3450, // Mock data for now
+    activeFarmers: 0,
+    activeBuyers: 0,
+    topFarmer: 'N/A',
+    bestDeal: 0,
+    avgOrderValue: 0,
+    topFarmersList: [],
+    currentMonthRevenue: 0,
+    lastMonthRevenue: 0,
+    growthPercent: 0,
+    pendingFarmers: 0,
+    newBuyersThisWeek: 0
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mocking data immediately instead of calling API
-    setTimeout(() => {
-      setStats({
-        totalOrdersCount: 1248,
-        totalRevenueSum: 845000,
-        activeFarmers: 120,
-        activeBuyers: 3450,
-      });
-      setLoading(false);
-    }, 500);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [statsRes, usersRes, ordersRes] = await Promise.all([
+          api.get('/admin/stats'),
+          api.get('/admin/users'),
+          api.get('/orders')
+        ]);
+        
+        const users = usersRes.data;
+        const activeFarmers = users.filter((u: any) => u.role === 'farmer').length;
+        const activeBuyers = users.filter((u: any) => u.role === 'buyer').length;
+        const orders = ordersRes.data;
+
+        const farmersMap: Record<string, string> = {};
+        users.forEach((u: any) => {
+          if (u.role === 'farmer') {
+             farmersMap[u.uid] = u.name || 'Unnamed Farmer';
+          }
+        });
+
+        let bestDeal = 0;
+        let farmerRevenue: Record<string, number> = {};
+        
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        let currentMonthRevenue = 0;
+        let lastMonthRevenue = 0;
+
+        orders.forEach((o: any) => {
+          const amount = Number(o.totalAmount) || 0;
+          const d = new Date(o.createdAt || Date.now());
+
+          if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+            currentMonthRevenue += amount;
+          } else if (
+            (d.getFullYear() === currentYear && d.getMonth() === currentMonth - 1) ||
+            (d.getFullYear() === currentYear - 1 && currentMonth === 0 && d.getMonth() === 11)
+          ) {
+            lastMonthRevenue += amount;
+          }
+
+          if (amount > bestDeal) bestDeal = amount;
+          if (o.farmerId) {
+            const fName = farmersMap[o.farmerId] || o.farmer || 'Unknown Farmer';
+            farmerRevenue[fName] = (farmerRevenue[fName] || 0) + amount;
+          }
+        });
+
+        let growthPercent = 0;
+        if (lastMonthRevenue > 0) {
+          growthPercent = ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+        } else if (currentMonthRevenue > 0) {
+          growthPercent = 100;
+        }
+
+        const pendingFarmers = users.filter((u: any) => u.role === 'farmer' && (!u.lastVerifiedAt || new Date(u.lastVerifiedAt).getTime() < Date.now() - 30 * 24 * 60 * 60 * 1000)).length;
+        
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const newBuyersThisWeek = users.filter((u: any) => u.role === 'buyer' && new Date(u.createdAt || Date.now()) > oneWeekAgo).length;
+
+        const sortedFarmers = Object.keys(farmerRevenue).sort((a, b) => farmerRevenue[b] - farmerRevenue[a]);
+        const topFarmerName = sortedFarmers.length > 0 ? sortedFarmers[0] : 'N/A';
+        const totalRev = statsRes.data.totalRevenueSum || 0;
+
+        const colors = [
+          'bg-orange-100 text-orange-600',
+          'bg-pink-100 text-pink-600',
+          'bg-blue-100 text-blue-600',
+          'bg-green-100 text-green-600'
+        ];
+
+        const topFarmersList = sortedFarmers.slice(0, 4).map((fName, idx) => {
+           const rev = farmerRevenue[fName];
+           const percent = totalRev > 0 ? Math.round((rev / totalRev) * 100) : 0;
+           return {
+             name: fName,
+             val: `₹${rev.toLocaleString('en-IN')}`,
+             p: `${percent}%`,
+             c: colors[idx % colors.length]
+           };
+        });
+
+        const avgOrderValue = statsRes.data.totalOrdersCount > 0 
+          ? Math.round(totalRev / statsRes.data.totalOrdersCount) 
+          : 0;
+
+        setStats({
+          totalOrdersCount: statsRes.data.totalOrdersCount || 0,
+          totalRevenueSum: totalRev,
+          activeFarmers,
+          activeBuyers,
+          topFarmer: topFarmerName,
+          bestDeal,
+          avgOrderValue,
+          topFarmersList,
+          currentMonthRevenue,
+          lastMonthRevenue,
+          growthPercent,
+          pendingFarmers,
+          newBuyersThisWeek
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
   if (loading) {
@@ -49,26 +168,29 @@ const Dashboard: React.FC = () => {
             <span className="text-[40px] font-black text-[#0f172a] tracking-tighter leading-none">
               ₹{stats.totalRevenueSum.toLocaleString('en-IN')}
             </span>
-            <div className="ml-4 flex space-x-2">
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#fb3f6c] text-white text-xs font-bold shadow-sm shadow-[#fb3f6c]/30">
-                <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" /> 7.9%
-              </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#0ea5e9] text-white text-xs font-bold shadow-sm shadow-[#0ea5e9]/30">
-                ₹12,335
-              </span>
-            </div>
+            {stats.totalOrdersCount > 0 && (
+              <div className="ml-4 flex space-x-2">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-white text-xs font-bold shadow-sm ${stats.growthPercent >= 0 ? 'bg-[#16a34a] shadow-[#16a34a]/30' : 'bg-[#fb3f6c] shadow-[#fb3f6c]/30'}`}>
+                  {stats.growthPercent >= 0 ? <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" /> : <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />}
+                  {Math.abs(stats.growthPercent).toFixed(1)}%
+                </span>
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#0ea5e9] text-white text-xs font-bold shadow-sm shadow-[#0ea5e9]/30">
+                  ₹{stats.currentMonthRevenue.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
           </div>
-          <p className="text-[13px] text-[#94a3b8] mt-2 font-medium">vs prev. ₹741,641 Jun 1 - Aug 31, 2026</p>
+          <p className="text-[13px] text-[#94a3b8] mt-2 font-medium">vs prev. month: ₹{stats.lastMonthRevenue.toLocaleString('en-IN')}</p>
         </div>
         
         <div className="flex space-x-3 pb-1">
            <div className="bg-white rounded-full border-none shadow-[0_4px_20px_rgb(0,0,0,0.04)] py-3 px-5 flex items-center cursor-pointer hover:scale-105 transition-transform">
              <div className="text-[13px] text-[#94a3b8] font-bold">Top Farmer</div>
-             <div className="ml-3 text-[15px] font-black text-[#0f172a]">Ramesh</div>
+             <div className="ml-3 text-[15px] font-black text-[#0f172a]">{stats.topFarmer}</div>
            </div>
            <div className="bg-[#0f172a] rounded-full shadow-[0_4px_20px_rgb(15,23,42,0.2)] py-3 px-5 flex items-center cursor-pointer hover:scale-105 transition-transform">
              <div className="text-[13px] text-[#94a3b8] font-bold">Best Deal</div>
-             <div className="ml-3 text-[15px] font-black text-white">₹42,300</div>
+             <div className="ml-3 text-[15px] font-black text-white">₹{stats.bestDeal.toLocaleString('en-IN')}</div>
            </div>
         </div>
       </div>
@@ -89,7 +211,9 @@ const Dashboard: React.FC = () => {
             <h3 className="text-xl font-bold text-slate-900 mt-0.5">{stats.totalOrdersCount.toLocaleString('en-IN')}</h3>
           </div>
           <div className="mt-2 flex items-center justify-between text-[10px]">
-            <span className="text-green-500 font-bold flex items-center"><TrendingUp className="h-3 w-3 mr-1" /> +18.2%</span>
+            <span className="text-green-500 font-bold flex items-center">
+              {stats.totalOrdersCount > 0 && <><TrendingUp className="h-3 w-3 mr-1" /> Active</>}
+            </span>
           </div>
         </div>
 
@@ -106,7 +230,7 @@ const Dashboard: React.FC = () => {
             <h3 className="text-xl font-bold text-slate-900 mt-0.5">{stats.activeFarmers}</h3>
           </div>
           <div className="mt-2 flex items-center justify-between text-[10px]">
-            <span className="text-slate-500 font-medium">14 pending verify</span>
+            <span className="text-slate-500 font-medium">{stats.pendingFarmers} pending verify</span>
           </div>
         </div>
 
@@ -123,7 +247,7 @@ const Dashboard: React.FC = () => {
             <h3 className="text-xl font-bold text-slate-900 mt-0.5">{stats.activeBuyers?.toLocaleString('en-IN')}</h3>
           </div>
           <div className="mt-2 flex items-center justify-between text-[10px]">
-            <span className="text-slate-500 font-medium">89 new this week</span>
+            <span className="text-slate-500 font-medium">{stats.newBuyersThisWeek} new this week</span>
           </div>
         </div>
         
@@ -135,11 +259,11 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-[10px] font-medium text-white/80 uppercase tracking-wider">Platform Value</p>
-            <h3 className="text-xl font-bold mt-0.5">₹18,552</h3>
+            <p className="text-[10px] font-medium text-white/80 uppercase tracking-wider">Avg Order Value</p>
+            <h3 className="text-xl font-bold mt-0.5">₹{stats.avgOrderValue.toLocaleString('en-IN')}</h3>
           </div>
           <div className="mt-2 flex items-center justify-between text-[10px]">
-            <span className="font-bold bg-white/20 px-2 py-0.5 rounded-full">373 / 276</span>
+            <span className="font-bold bg-white/20 px-2 py-0.5 rounded-full">{stats.totalOrdersCount} Orders</span>
           </div>
         </div>
 
@@ -196,26 +320,24 @@ const Dashboard: React.FC = () => {
           </div>
           
           <div className="space-y-3">
-            {/* Mock List */}
-            {[
-              { name: 'Ramesh Singh', val: '₹209,633', p: '43%', c: 'bg-orange-100 text-orange-600' },
-              { name: 'Suresh Kumar', val: '₹142,823', p: '27%', c: 'bg-pink-100 text-pink-600' },
-              { name: 'Geeta Devi', val: '₹89,935', p: '11%', c: 'bg-blue-100 text-blue-600' },
-              { name: 'Amit Patel', val: '₹37,028', p: '7%', c: 'bg-green-100 text-green-600' },
-            ].map((i, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className={`h-6 w-6 rounded-full ${i.c} flex items-center justify-center font-bold text-[10px]`}>
-                    {i.name.charAt(0)}
+            {stats.topFarmersList.length === 0 ? (
+              <div className="text-center text-xs text-slate-400 py-4">No sales data yet</div>
+            ) : (
+              stats.topFarmersList.map((i, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`h-6 w-6 rounded-full ${i.c} flex items-center justify-center font-bold text-[10px]`}>
+                      {i.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-bold text-slate-700 text-xs">{i.name}</span>
                   </div>
-                  <span className="font-bold text-slate-700 text-xs">{i.name}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold text-slate-900 text-xs">{i.val}</span>
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md">{i.p}</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-bold text-slate-900 text-xs">{i.val}</span>
-                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md">{i.p}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

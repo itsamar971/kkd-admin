@@ -10,6 +10,14 @@ import Dispatch from './pages/Dispatch';
 import Messages from './pages/Messages';
 import Products from './pages/Products';
 import Settings from './pages/Settings';
+import Verification from './pages/Verification';
+import Announcements from './pages/Announcements';
+import Promotions from './pages/Promotions';
+import Analytics from './pages/Analytics';
+import Disputes from './pages/Disputes';
+import FleetMap from './pages/FleetMap';
+import Finance from './pages/Finance';
+import MandiPrices from './pages/MandiPrices';
 import Profile from './pages/Profile';
 import { Loader2 } from 'lucide-react';
 
@@ -54,6 +62,14 @@ const App: React.FC = () => {
             <Route path="dispatch" element={<Dispatch />} />
             <Route path="messages" element={<Messages />} />
             <Route path="products" element={<Products />} />
+            <Route path="verification" element={<Verification />} />
+            <Route path="announcements" element={<Announcements />} />
+            <Route path="promotions" element={<Promotions />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="disputes" element={<Disputes />} />
+            <Route path="fleet" element={<FleetMap />} />
+            <Route path="finance" element={<Finance />} />
+            <Route path="mandi" element={<MandiPrices />} />
             <Route path="settings" element={<Settings />} />
             <Route path="profile" element={<Profile />} />
           </Route>

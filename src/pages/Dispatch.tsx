@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Truck, Phone, Navigation, Clock, Search, MoreHorizontal } from 'lucide-react';
+import { Truck, Phone, Navigation, Clock, Search } from 'lucide-react';
+import api from '../api/axios';
 
 interface Agent {
   id: string;
@@ -20,11 +21,7 @@ interface DispatchEvent {
   time: string;
 }
 
-const mockAgents: Agent[] = [
-  { id: 'a1', name: 'Vikram Singh', phone: '+91 9876543210', status: 'On Route', currentOrders: 3 },
-  { id: 'a2', name: 'Rajesh Kumar', phone: '+91 8765432109', status: 'Available', currentOrders: 0 },
-  { id: 'a3', name: 'Deepak Patel', phone: '+91 7654321098', status: 'Offline', currentOrders: 0 },
-];
+
 
 const mockHistory: DispatchEvent[] = [
   { id: 'd1', orderId: '#ORD-7829', agentName: 'Vikram Singh', pickup: 'Ramesh Farm, Sector 4', dropoff: 'Buyer - Anil, City Center', status: 'In Transit', time: '10:45 AM' },
@@ -33,8 +30,55 @@ const mockHistory: DispatchEvent[] = [
 ];
 
 const Dispatch: React.FC = () => {
-  const [agents] = useState<Agent[]>(mockAgents);
-  const [history] = useState<DispatchEvent[]>(mockHistory);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [history, setHistory] = useState<DispatchEvent[]>(mockHistory);
+
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await api.get('/orders');
+        const orders = response.data;
+        
+        const relevantOrders = orders.filter((o: any) => 
+          ['processing', 'dispatched', 'delivered'].includes(o.status.toLowerCase())
+        );
+        
+        const mappedHistory: DispatchEvent[] = relevantOrders.map((o: any) => ({
+          id: `d_${o.id}`,
+          orderId: `#${o.id.slice(0, 8).toUpperCase()}`,
+          agentName: o.driverNumber ? `Driver (${o.driverNumber})` : 'Pending Assignment',
+          pickup: `Farmer ID: ${o.farmerId.slice(0,6)}`,
+          dropoff: o.deliveryAddress,
+          status: o.status === 'delivered' ? 'Delivered' : o.status === 'dispatched' ? 'In Transit' : 'Pending',
+          time: new Date(o.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        }));
+        
+        setHistory(mappedHistory.length > 0 ? mappedHistory : mockHistory); // Fallback to mock if empty for visual
+      } catch (error) {
+        console.error('Error fetching dispatch history', error);
+      }
+
+      try {
+        const usersRes = await api.get('/admin/users');
+        const allUsers = usersRes.data;
+        const agentUsers = allUsers.filter((u: any) => u.role === 'agent');
+        
+        const mappedAgents = agentUsers.map((u: any) => ({
+          id: u.uid,
+          name: u.name || 'Unnamed Agent',
+          phone: u.phone || u.mobile || 'No Phone',
+          status: u.status || 'Available',
+          currentOrders: u.currentOrders || 0
+        }));
+        setAgents(mappedAgents);
+      } catch (error) {
+        console.error('Error fetching agents', error);
+      }
+    };
+    
+    fetchHistory();
+  }, []);
 
   const cardClass = "bg-white rounded-2xl border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden";
 
@@ -62,29 +106,35 @@ const Dispatch: React.FC = () => {
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {agents.map(agent => (
-              <div key={agent.id} className="border border-slate-100 rounded-xl p-4 hover:shadow-md hover:border-slate-200 transition-all">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm">{agent.name}</h4>
-                    <div className="flex items-center text-slate-500 text-xs mt-1 font-medium">
-                      <Phone className="h-3 w-3 mr-1" /> {agent.phone}
-                    </div>
-                  </div>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${
-                    agent.status === 'Available' ? 'bg-green-100 text-green-700' :
-                    agent.status === 'On Route' ? 'bg-blue-100 text-blue-700' :
-                    'bg-slate-100 text-slate-600'
-                  }`}>
-                    {agent.status}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs border-t border-slate-50 pt-3">
-                  <span className="text-slate-400 font-medium">Current Orders</span>
-                  <span className="font-bold text-slate-700">{agent.currentOrders}</span>
-                </div>
+            {agents.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                No active agents found.
               </div>
-            ))}
+            ) : (
+              agents.map(agent => (
+                <div key={agent.id} className="border border-slate-100 rounded-xl p-4 hover:shadow-md hover:border-slate-200 transition-all">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm">{agent.name}</h4>
+                      <div className="flex items-center text-slate-500 text-xs mt-1 font-medium">
+                        <Phone className="h-3 w-3 mr-1" /> {agent.phone}
+                      </div>
+                    </div>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${
+                      agent.status === 'Available' ? 'bg-green-100 text-green-700' :
+                      agent.status === 'On Route' ? 'bg-blue-100 text-blue-700' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      {agent.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs border-t border-slate-50 pt-3">
+                    <span className="text-slate-400 font-medium">Current Orders</span>
+                    <span className="font-bold text-slate-700">{agent.currentOrders}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

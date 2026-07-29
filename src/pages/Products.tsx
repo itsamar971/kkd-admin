@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Package, MoreHorizontal, Plus, Trash2, Edit } from 'lucide-react';
+import { Package, Plus, Trash2, Edit } from 'lucide-react';
 import api from '../api/axios';
 
 interface Product {
   id: string;
   name: string;
-  price: number;
-  stock: number;
+  pricePerKg: number;
+  stockQuantityKg: number;
   category: string;
   imageUrl?: string;
   farmerId: string;
@@ -24,12 +24,6 @@ const Products: React.FC = () => {
         setProducts(response.data);
       } catch (error) {
         console.error('Error fetching products:', error);
-        // Mock data if backend fails
-        setProducts([
-          { id: '1', name: 'Fresh Organic Tomatoes', price: 40, stock: 150, category: 'Vegetables', farmerId: 'f1' },
-          { id: '2', name: 'Alphonso Mangoes', price: 300, stock: 50, category: 'Fruits', farmerId: 'f2' },
-          { id: '3', name: 'Basmati Rice (Premium)', price: 120, stock: 500, category: 'Grains', farmerId: 'f3' },
-        ]);
       } finally {
         setLoading(false);
       }
@@ -101,10 +95,10 @@ const Products: React.FC = () => {
                           {product.category}
                         </span>
                       </TableCell>
-                      <TableCell className="font-bold text-slate-900">₹{product.price}</TableCell>
+                      <TableCell className="font-bold text-slate-900">₹{product.pricePerKg}</TableCell>
                       <TableCell>
-                        <span className={`font-bold text-xs px-2.5 py-1 rounded-md ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {product.stock} {product.stock > 0 ? 'in stock' : 'out of stock'}
+                        <span className={`font-bold text-xs px-2.5 py-1 rounded-md ${product.stockQuantityKg > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {product.stockQuantityKg} {product.stockQuantityKg > 0 ? 'in stock' : 'out of stock'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">

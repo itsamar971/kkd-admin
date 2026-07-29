@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Badge } from '../components/ui/badge';
+
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import api from '../api/axios';
@@ -32,17 +32,12 @@ const Farmers: React.FC = () => {
   const fetchFarmers = async () => {
     try {
       setLoading(true);
-      // Mock Data
-      setTimeout(() => {
-        setFarmers([
-          { uid: 'f1', email: 'ramesh@farmer.com', displayName: 'Ramesh Singh', role: 'farmer', isVerified: true, lastVerifiedAt: new Date().toISOString(), createdAt: '2023-01-10T10:00:00Z' },
-          { uid: 'f2', email: 'suresh@farmer.com', displayName: 'Suresh Kumar', role: 'farmer', isVerified: false, lastVerifiedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(), createdAt: '2023-02-15T12:30:00Z' },
-          { uid: 'f3', email: 'geeta@farmer.com', displayName: 'Geeta Devi', role: 'farmer', isVerified: false, createdAt: '2023-03-20T09:15:00Z' },
-        ]);
-        setLoading(false);
-      }, 500);
+      const response = await api.get('/admin/users');
+      const allFarmers = response.data.filter((u: any) => u.role === 'farmer');
+      setFarmers(allFarmers);
     } catch (error) {
       console.error('Failed to fetch farmers', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -58,12 +53,7 @@ const Farmers: React.FC = () => {
       ));
     } catch (error) {
       console.error('Failed to verify farmer', error);
-      // Mock success for frontend-only
-      setFarmers(prev => prev.map(f => 
-        f.uid === uid 
-          ? { ...f, isVerified: true, lastVerifiedAt: new Date().toISOString() } 
-          : f
-      ));
+      alert('Failed to verify farmer. Please try again.');
     } finally {
       setVerifyingId(null);
     }

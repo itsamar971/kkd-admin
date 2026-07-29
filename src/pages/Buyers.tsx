@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Badge } from '../components/ui/badge';
+import api from '../api/axios';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { CheckCircle, Plus, Trash2 } from 'lucide-react';
@@ -28,17 +28,12 @@ const Buyers: React.FC = () => {
   const fetchBuyers = async () => {
     try {
       setLoading(true);
-      // Mock Data
-      setTimeout(() => {
-        setBuyers([
-          { uid: 'b1', email: 'anil@buyer.com', displayName: 'Anil Kumar', role: 'buyer', createdAt: '2023-01-15T10:00:00Z' },
-          { uid: 'b2', email: 'priya@buyer.com', displayName: 'Priya Sharma', role: 'buyer', createdAt: '2023-02-20T12:30:00Z' },
-          { uid: 'b3', email: 'rahul@buyer.com', displayName: 'Rahul Verma', role: 'buyer', createdAt: '2023-04-05T09:15:00Z' },
-        ]);
-        setLoading(false);
-      }, 500);
+      const response = await api.get('/admin/users');
+      const allBuyers = response.data.filter((u: any) => u.role === 'buyer');
+      setBuyers(allBuyers);
     } catch (error) {
       console.error('Failed to fetch buyers', error);
+    } finally {
       setLoading(false);
     }
   };
