@@ -14,6 +14,8 @@ interface Farmer {
   isVerified?: boolean;
   lastVerifiedAt?: string;
   createdAt?: string;
+  cropVerificationImage?: string;
+  cropVerificationUrl?: string;
 }
 
 const Farmers: React.FC = () => {
@@ -203,15 +205,25 @@ const Farmers: React.FC = () => {
                                 </DialogHeader>
                                 <div className="py-4">
                                   <div className="border rounded-md overflow-hidden bg-slate-100 flex items-center justify-center min-h-[250px]">
-                                    <img 
-                                      src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'}/public/uploads/crop_${farmer.uid}.jpg`} 
-                                      alt="Crop verification" 
-                                      className="max-w-full max-h-[300px] object-contain"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                        e.currentTarget.parentElement!.innerHTML = '<div class="text-slate-400 text-sm font-medium">No image uploaded yet or image not found</div>';
-                                      }}
-                                    />
+                                    {farmer.cropVerificationImage ? (
+                                      <img 
+                                        src={farmer.cropVerificationImage} 
+                                        alt="Crop verification" 
+                                        className="max-w-full max-h-[300px] object-contain"
+                                      />
+                                    ) : farmer.cropVerificationUrl ? (
+                                      <img 
+                                        src={farmer.cropVerificationUrl} 
+                                        alt="Crop verification" 
+                                        className="max-w-full max-h-[300px] object-contain"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.parentElement!.innerHTML = '<div class="text-slate-400 text-sm font-medium">Image failed to load</div>';
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="text-slate-400 text-sm font-medium">No image uploaded yet</div>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex justify-end space-x-2 pt-4 border-t">
