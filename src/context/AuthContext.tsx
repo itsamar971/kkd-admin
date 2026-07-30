@@ -19,10 +19,20 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const savedAdminSession = localStorage.getItem('kkd_admin_session');
+    if (savedAdminSession) {
+      try {
+        const parsedUser = JSON.parse(savedAdminSession);
+        setUser(parsedUser);
+        setIsAdmin(true);
+      } catch (e) {
+        localStorage.removeItem('kkd_admin_session');
+      }
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
       if (currentUser) {
+        setUser(currentUser);
         try {
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userDoc = await getDoc(userDocRef);
@@ -31,15 +41,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setIsAdmin(true);
           } else {
             setIsAdmin(false);
-            // Optional: automatically sign out non-admins
-            // await signOut(auth);
           }
         } catch (error) {
           console.error("Error fetching user role:", error);
           setIsAdmin(false);
         }
-      } else {
-        setIsAdmin(false);
       }
       
       setLoading(false);
@@ -49,17 +55,20 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   }, []);
 
   const manualAdminLogin = () => {
-    setUser({
+    const adminUser = {
       uid: 'hardcoded-admin-id',
       email: 'admin@kisankadukan.in',
       emailVerified: true,
-    } as User);
+    } as User;
+    setUser(adminUser);
     setIsAdmin(true);
+    localStorage.setItem('kkd_admin_session', JSON.stringify(adminUser));
   };
 
   const handleLogout = async () => {
     setUser(null);
     setIsAdmin(false);
+    localStorage.removeItem('kkd_admin_session');
     await signOut(auth);
   };
 
