@@ -61,6 +61,24 @@ const Farmers: React.FC = () => {
     }
   };
 
+  const handleRequestReupload = async (uid: string) => {
+    try {
+      setVerifyingId(uid);
+      await api.patch(`/admin/users/${uid}/verify`, { action: 'request_reupload' });
+      setFarmers(prev => prev.map(f => 
+        f.uid === uid 
+          ? { ...f, isVerified: false, lastVerifiedAt: undefined, cropVerificationImage: undefined, cropVerificationUrl: undefined } 
+          : f
+      ));
+      alert('Re-upload requested! The farmer will be prompted to upload a new crop photo upon login.');
+    } catch (error) {
+      console.error('Failed to request re-upload', error);
+      alert('Failed to request re-upload. Please try again.');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   const handleAddFarmer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFarmer.email || !newFarmer.name) return;
@@ -226,15 +244,25 @@ const Farmers: React.FC = () => {
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex justify-end space-x-2 pt-4 border-t">
-                                  <Button variant="outline">Close</Button>
+                                <div className="flex justify-between items-center pt-4 border-t">
                                   <Button 
-                                    className="bg-green-600 hover:bg-green-700 text-white" 
-                                    onClick={() => handleVerify(farmer.uid)}
-                                    disabled={verifyingId === farmer.uid || (!isPending && !!farmer.lastVerifiedAt)}
+                                    variant="outline" 
+                                    className="text-red-600 border-red-200 hover:bg-red-50 text-xs font-semibold"
+                                    onClick={() => handleRequestReupload(farmer.uid)}
+                                    disabled={verifyingId === farmer.uid}
                                   >
-                                    {verifyingId === farmer.uid ? 'Verifying...' : 'Verify Farmer'}
+                                    Request Re-upload
                                   </Button>
+                                  <div className="flex space-x-2">
+                                    <Button variant="outline">Close</Button>
+                                    <Button 
+                                      className="bg-green-600 hover:bg-green-700 text-white" 
+                                      onClick={() => handleVerify(farmer.uid)}
+                                      disabled={verifyingId === farmer.uid || (!isPending && !!farmer.lastVerifiedAt)}
+                                    >
+                                      {verifyingId === farmer.uid ? 'Verifying...' : 'Verify Farmer'}
+                                    </Button>
+                                  </div>
                                 </div>
                               </DialogContent>
                             </Dialog>
