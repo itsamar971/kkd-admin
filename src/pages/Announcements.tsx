@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Send, Clock, Loader2, Users } from 'lucide-react';
+import { Megaphone, Send, Clock, Loader2, Users, Trash2 } from 'lucide-react';
 import api from '../api/axios';
 
 interface Announcement {
@@ -32,6 +32,18 @@ const Announcements: React.FC = () => {
       console.error('Failed to load announcements', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this broadcast notification?')) {
+      try {
+        await api.delete(`/admin/announcements/${id}`);
+        fetchAnnouncements();
+      } catch (err) {
+        console.error('Failed to delete announcement', err);
+        alert('Failed to delete announcement');
+      }
     }
   };
 
@@ -164,6 +176,13 @@ const Announcements: React.FC = () => {
                       <h4 className="text-base font-bold text-slate-900 mt-2">{a.title}</h4>
                       <p className="text-sm text-slate-600 mt-1">{a.message}</p>
                     </div>
+                    <button 
+                      onClick={() => handleDelete(a.id)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-2"
+                      title="Delete Announcement"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               ))}
