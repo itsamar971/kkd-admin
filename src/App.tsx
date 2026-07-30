@@ -19,7 +19,7 @@ import FleetMap from './pages/FleetMap';
 import Finance from './pages/Finance';
 import MandiPrices from './pages/MandiPrices';
 import Profile from './pages/Profile';
-import { Loader2 } from 'lucide-react';
+import { LumaSpin } from './components/LumaSpin';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isAdmin, loading } = useAuth();
@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500 flex-col space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <LumaSpin size={50} color="#166534" />
         <span className="font-semibold tracking-tight text-sm">Loading admin...</span>
       </div>
     );
