@@ -33,7 +33,7 @@ const Messages: React.FC = () => {
       try {
         const res = await api.get('/admin/messages');
         setConversations(res.data);
-        if (res.data.length > 0) {
+        if (res.data.length > 0 && !activeConvId) {
           setActiveConvId(res.data[0].id);
         }
       } catch (error) {
@@ -41,7 +41,9 @@ const Messages: React.FC = () => {
       }
     };
     fetchConversations();
-  }, []);
+    const interval = setInterval(fetchConversations, 3000);
+    return () => clearInterval(interval);
+  }, [activeConvId]);
 
   const activeConv = conversations.find(c => c.id === activeConvId);
 
