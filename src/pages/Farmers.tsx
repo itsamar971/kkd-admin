@@ -10,6 +10,10 @@ interface Farmer {
   uid: string;
   email: string;
   displayName?: string;
+  name?: string;
+  fullName?: string;
+  mobile?: string;
+  phone?: string;
   role: string;
   isVerified?: boolean;
   lastVerifiedAt?: string;
@@ -176,6 +180,7 @@ const Farmers: React.FC = () => {
                   <TableRow>
                     <TableHead className="font-semibold text-slate-600">Name</TableHead>
                     <TableHead className="font-semibold text-slate-600">Email</TableHead>
+                    <TableHead className="font-semibold text-slate-600">Phone</TableHead>
                     <TableHead className="font-semibold text-slate-600">Status</TableHead>
                     <TableHead className="font-semibold text-slate-600">Last Verified</TableHead>
                     <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
@@ -186,8 +191,9 @@ const Farmers: React.FC = () => {
                     const isPending = needsVerification(farmer);
                     return (
                       <TableRow key={farmer.uid} className="hover:bg-slate-50/50 transition-colors">
-                        <TableCell className="font-bold text-slate-700 text-sm">{farmer.displayName || 'Unnamed Farmer'}</TableCell>
+                        <TableCell className="font-bold text-slate-700 text-sm">{farmer.name || farmer.fullName || farmer.displayName || 'Unnamed Farmer'}</TableCell>
                         <TableCell className="text-slate-500 text-sm">{farmer.email}</TableCell>
+                        <TableCell className="text-slate-500 text-sm">{farmer.mobile || farmer.phone || 'N/A'}</TableCell>
                         <TableCell>
                           {isPending ? (
                             <span className="inline-flex items-center bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-md text-[10px] font-bold">

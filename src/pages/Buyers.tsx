@@ -9,6 +9,10 @@ interface Buyer {
   uid: string;
   email: string;
   displayName?: string;
+  name?: string;
+  fullName?: string;
+  mobile?: string;
+  phone?: string;
   role: string;
   createdAt?: string;
 }
@@ -123,6 +127,7 @@ const Buyers: React.FC = () => {
                   <TableRow>
                     <TableHead className="font-semibold text-slate-600">Name</TableHead>
                     <TableHead className="font-semibold text-slate-600">Email</TableHead>
+                    <TableHead className="font-semibold text-slate-600">Phone</TableHead>
                     <TableHead className="font-semibold text-slate-600">Status</TableHead>
                     <TableHead className="font-semibold text-slate-600">Joined Date</TableHead>
                     <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
@@ -131,8 +136,9 @@ const Buyers: React.FC = () => {
                 <TableBody>
                   {buyers.map((buyer) => (
                     <TableRow key={buyer.uid} className="hover:bg-slate-50/50 transition-colors">
-                      <TableCell className="font-bold text-slate-700 text-sm">{buyer.displayName || 'Unnamed Buyer'}</TableCell>
+                      <TableCell className="font-bold text-slate-700 text-sm">{buyer.name || buyer.fullName || buyer.displayName || 'Unnamed Buyer'}</TableCell>
                       <TableCell className="text-slate-500 text-sm">{buyer.email}</TableCell>
+                      <TableCell className="text-slate-500 text-sm">{buyer.mobile || buyer.phone || 'N/A'}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
                           <CheckCircle className="mr-1 h-3 w-3" />
