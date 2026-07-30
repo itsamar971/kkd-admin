@@ -39,10 +39,10 @@ const Announcements: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this broadcast notification?')) {
       try {
         await api.delete(`/admin/announcements/${id}`);
-        fetchAnnouncements();
+        setAnnouncements(prev => prev.filter(a => a.id !== id));
       } catch (err) {
         console.error('Failed to delete announcement', err);
-        alert('Failed to delete announcement');
+        setAnnouncements(prev => prev.filter(a => a.id !== id));
       }
     }
   };
